@@ -9,7 +9,7 @@
   const state = {
     contacts: D.contacts.map(c => ({...c, notes:[...c.notes], promises:[...c.promises], interests:[...c.interests]})),
     followups: [...D.followups], reminders:[...D.reminders], events:[...D.events],
-    guided: true, guidedStep:0, filter:"All", query:"", captured:[], currentFollowup:0, digestSeen:false,
+    guided: true, guidedStep:0, filter:"All", query:"", captured:[], deletedEventContacts:new Set(), currentFollowup:0, draftContactId:null, digestSeen:false,
     onboardingStep:0, onboardingDone:true, notificationEnabled:true, timer:0
   };
   const route = () => location.hash.replace(/^#\/?/,"") || "home";
@@ -73,8 +73,8 @@
     return `<button class="text-button" data-action="back-events">‹ Events</button><div class="event-live"><p>EVENT MODE</p><h2>Fall Career Fair</h2><p>October 14 · Keep meeting people, Tend will keep up.</p><div class="event-count">${6+state.captured.length} people met</div><button class="big-capture" data-action="event-capture" aria-label="Capture next person">＋</button><div class="capture-label">Tap to capture someone</div><div class="event-controls">${button("End event","event-end","small-button coral")}${button("Quick note","capture","small-button")}</div></div><div class="section-head"><h2>Quick cards</h2></div>${(state.captured.map(id=>contact(id)).filter(Boolean).concat(state.contacts.filter(c=>c.event==="Fall Career Fair").slice(0,3))).map(c=>`<article class="card list-card" data-open-contact="${c.id}">${person(c,c.role+" · "+c.company)}<span class="chip">Saved</span></article>`).join("")}`;
   }
   function eventReview() {
-    const list=state.contacts.filter(c=>c.event==="Fall Career Fair");
-    return `<button class="text-button" data-action="back-events">‹ Events</button>${head("Event review","FALL CAREER FAIR")}<p class="person-meta">Take a quick look through who you met. You can fix anything before following up.</p>${list.map(c=>`<div class="card list-card">${person(c)}${button("Confirm","confirm:"+c.id,"small-button")}${button("Edit","edit:"+c.id,"text-button")}</div>`).join("")}<button class="button primary full" data-action="draft-all">✦ Draft thank-you notes for everyone</button>`;
+    const list=state.contacts.filter(c=>c.event==="Fall Career Fair"&&!state.deletedEventContacts.has(c.id));
+    return `<button class="text-button" data-action="back-events">‹ Events</button>${head("Event review","FALL CAREER FAIR")}<p class="person-meta">Take a quick look through who you met. You can fix anything before following up.</p>${list.map(c=>`<div class="card list-card">${person(c)}${button("Confirm","confirm:"+c.id,"small-button")}${button("Edit","edit:"+c.id,"text-button")}${button("Delete","delete:"+c.id,"text-button")}</div>`).join("")}<button class="button primary full" data-action="draft-all">✦ Draft thank-you notes for everyone</button>`;
   }
   function followup() {
     const ids=state.followups, id=state.draftContactId||ids[state.currentFollowup];
@@ -124,7 +124,7 @@
     if(a==="type-contact"){typeSheet();return}
     if(a==="save-alex"||a==="edit-alex"){let alex=contact("alex-rivera");if(!alex){alex={id:"alex-rivera",name:"Alex Rivera",role:"Product Manager",company:"Lumen Labs",met:"Fall Career Fair",event:"Fall Career Fair",date:"Oct 14",color:"#be4bdb",interests:["Startup podcasts"],promises:["Email about spring internship"],summary:"Talked about a startup podcast and invited Jordan to email about a spring internship.",notes:["Asked Jordan to follow up about the spring internship."],starred:false};state.contacts.unshift(alex)}closeSheet();state.guidedStep=Math.max(state.guidedStep,1);setHint(state.guidedStep);routeTo("contact/alex-rivera");return}
     if(a==="event-start"){routeTo("event-mode");return}
-    if(a==="event-capture"){const pool=["sam-williams","olivia-martin","ethan-brooks","grace-kim"];const id=pool[state.captured.length%pool.length];if(!state.captured.includes(id))state.captured.push(id);showToast(contact(id).name+" added to your event.");render();return}
+    if(a==="event-capture"){const pool=["sam-williams","olivia-martin","ethan-brooks","grace-kim"];const id=pool[state.captured.length%pool.length];state.captured.push(id);showToast(contact(id).name+" added to your event.");render();return}
     if(a==="event-end"){routeTo("event-review");return}
     if(a==="event-review"){routeTo("event-review");return}
     if(a==="draft-all"){showToast("Putting together your sample drafts…");setTimeout(()=>showToast("8 thank-you drafts ready."),850);return}
@@ -144,7 +144,7 @@
     if(a.startsWith("remind:")){let id=a.slice(7);state.reminders.unshift({contact:id,when:"Tomorrow",reason:"You chose to reconnect tomorrow",draft:""});showToast("Reminder set for tomorrow.");return}
     if(a.startsWith("draft:")){const id=a.slice(6);state.draftContactId=id;const index=state.followups.indexOf(id);if(index>=0)state.currentFollowup=index;routeTo("followup");return}
     if(a.startsWith("note:")){const id=a.slice(5),note=prompt("Add a note to remember:");if(note){contact(id).notes.push(note);render();showToast("Note added.");}return}
-    if(a.startsWith("confirm:")){showToast("Contact confirmed.");return}
+    if(a.startsWith("confirm:")){showToast("Contact confirmed.");return}\n    if(a.startsWith("delete:")){state.deletedEventContacts.add(a.slice(7));showToast("Contact removed from this event review.");render();return}
     if(a.startsWith("edit:")){showToast("Contact editing is coming in the full app.");return}
     if(a==="onboard-next"){state.onboardingStep++;if(state.onboardingStep>3){state.onboardingDone=true;routeTo("home")}else render();return}
     if(a==="skip-intro"){state.onboardingDone=true;routeTo("home");return}
@@ -165,7 +165,7 @@
     const payload={email,school:$("#school").value.trim(),graduation_year:$("#grad-year").value};
     fetch(endpoint,{method:"POST",headers:{"Accept":"application/json","Content-Type":"application/json"},body:JSON.stringify(payload)}).then(res=>{if(!res.ok)throw new Error("Request failed");status.textContent="You’re on the list. We’ll be in touch before the beta.";status.className="form-status";form.reset();}).catch(()=>{status.textContent="Something went wrong. Please try again.";status.className="form-status error";}).finally(()=>{buttonEl.disabled=false;buttonEl.innerHTML='Join the waitlist <span aria-hidden="true">→</span>';});
   }
-  function restart(){state.contacts=D.contacts.map(c=>({...c,notes:[...c.notes],promises:[...c.promises],interests:[...c.interests]}));state.followups=[...D.followups];state.reminders=[...D.reminders];state.captured=[];state.currentFollowup=0;state.guidedStep=0;state.filter="All";state.query="";closeSheet();routeTo("home");showToast("Demo restarted.");setHint(0);}
+  function restart(){state.contacts=D.contacts.map(c=>({...c,notes:[...c.notes],promises:[...c.promises],interests:[...c.interests]}));state.followups=[...D.followups];state.reminders=[...D.reminders];state.captured=[];state.deletedEventContacts.clear();state.currentFollowup=0;state.draftContactId=null;state.guidedStep=0;state.filter="All";state.query="";closeSheet();routeTo("home");showToast("Demo restarted.");setHint(0);}
   const toggle=$("#guided-toggle");toggle.addEventListener("change",()=>{state.guided=toggle.checked;setHint(state.guidedStep);});
   const mobileSheet=$("#waitlist-sheet");const desktopForm=$("#waitlist-form").cloneNode(true);const slot=$("#mobile-form-slot");slot.appendChild(desktopForm);desktopForm.id="mobile-waitlist-form";desktopForm.querySelector("#email").id="mobile-email";desktopForm.querySelector('label[for="email"]').htmlFor="mobile-email";desktopForm.querySelector("#school").id="mobile-school";desktopForm.querySelector('label[for="school"]').htmlFor="mobile-school";desktopForm.querySelector("#grad-year").id="mobile-grad-year";desktopForm.querySelector('label[for="grad-year"]').htmlFor="mobile-grad-year";desktopForm.querySelector("#website").id="mobile-website";desktopForm.querySelector('label[for="website"]').htmlFor="mobile-website";desktopForm.querySelector("#form-status").id="mobile-form-status";
   document.addEventListener("click",e=>{const a=e.target.closest("[data-action]")?.dataset.action;if(a==="open-waitlist"){mobileSheet.classList.add("open");mobileSheet.setAttribute("aria-hidden","false");$("#mobile-email").focus()}if(a==="close-waitlist"||e.target===mobileSheet){mobileSheet.classList.remove("open");mobileSheet.setAttribute("aria-hidden","true");}});
