@@ -144,7 +144,8 @@
     if(a.startsWith("remind:")){let id=a.slice(7);state.reminders.unshift({contact:id,when:"Tomorrow",reason:"You chose to reconnect tomorrow",draft:""});showToast("Reminder set for tomorrow.");return}
     if(a.startsWith("draft:")){const id=a.slice(6);state.draftContactId=id;const index=state.followups.indexOf(id);if(index>=0)state.currentFollowup=index;routeTo("followup");return}
     if(a.startsWith("note:")){const id=a.slice(5),note=prompt("Add a note to remember:");if(note){contact(id).notes.push(note);render();showToast("Note added.");}return}
-    if(a.startsWith("confirm:")){showToast("Contact confirmed.");return}\n    if(a.startsWith("delete:")){state.deletedEventContacts.add(a.slice(7));showToast("Contact removed from this event review.");render();return}
+    if(a.startsWith("confirm:")){showToast("Contact confirmed.");return}
+    if(a.startsWith("delete:")){state.deletedEventContacts.add(a.slice(7));showToast("Contact removed from this event review.");render();return}
     if(a.startsWith("edit:")){showToast("Contact editing is coming in the full app.");return}
     if(a==="onboard-next"){state.onboardingStep++;if(state.onboardingStep>3){state.onboardingDone=true;routeTo("home")}else render();return}
     if(a==="skip-intro"){state.onboardingDone=true;routeTo("home");return}
