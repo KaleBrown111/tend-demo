@@ -77,7 +77,7 @@
     return `<button class="text-button" data-action="back-events">‹ Events</button>${head("Event review","FALL CAREER FAIR")}<p class="person-meta">Take a quick look through who you met. You can fix anything before following up.</p>${list.map(c=>`<div class="card list-card">${person(c)}${button("Confirm","confirm:"+c.id,"small-button")}${button("Edit","edit:"+c.id,"text-button")}</div>`).join("")}<button class="button primary full" data-action="draft-all">✦ Draft thank-you notes for everyone</button>`;
   }
   function followup() {
-    const ids=state.followups, id=ids[state.currentFollowup];
+    const ids=state.followups, id=state.draftContactId||ids[state.currentFollowup];
     if(!id)return `${head("Follow up")}<div class="success-mark">✓</div><p class="empty-state">You’re all caught up.</p>`;
     const c=contact(id), rem=state.reminders.find(x=>x.contact===id);
     return `<button class="text-button" data-action="back">‹ Today</button>${head("Follow up",`NOTE ${state.currentFollowup+1} OF ${ids.length}`)}<article class="card follow-card">${person(c)}<div class="due-line">${esc(rem?.reason||"Send a thank-you while the conversation is fresh.")}</div></article><p class="person-meta">A personal draft, ready for your edits.</p><label class="sr-only" for="draft-text">Follow-up draft</label><textarea class="draft-box" id="draft-text">${esc(rem?.draft||`Hi ${c.name.split(" ")[0]}, it was great meeting you at the Fall Career Fair. I enjoyed hearing about ${c.interests[0]||"your work"} and learning more about ${c.company}. I’d love to stay in touch and hear more about your experience when you have a moment. Thanks again for the conversation!`)}</textarea><div class="button-row">${button("Skip","skip","text-button")}${button("Remind me tomorrow","tomorrow","small-button")}</div><button class="button primary full" data-action="send">Send note</button><div id="handoff"></div>`;
@@ -130,9 +130,9 @@
     if(a==="draft-all"){showToast("Putting together your sample drafts…");setTimeout(()=>showToast("8 thank-you drafts ready."),850);return}
     if(a==="followups"){state.currentFollowup=0;routeTo("followup");return}
     if(a==="send"){const h=$("#handoff");if(h)h.innerHTML='<div class="card"><strong style="font-size:12px">Opening your email app…</strong><p class="person-meta">This is a simulated handoff. Did you send it?</p>'+button("Yes, mark it done","sent","button primary full")+button("Back to draft","handoff-back","text-button full")+'</div>';return}
-    if(a==="sent"){const id=state.followups[state.currentFollowup];state.followups=state.followups.filter(x=>x!==id);state.currentFollowup=Math.min(state.currentFollowup,state.followups.length-1);state.guidedStep=Math.max(state.guidedStep,4);showToast("Follow-up marked done ✓");render();return}
+    if(a==="sent"){const id=state.draftContactId||state.followups[state.currentFollowup];state.followups=state.followups.filter(x=>x!==id);state.draftContactId=null;state.currentFollowup=Math.min(state.currentFollowup,state.followups.length-1);state.guidedStep=Math.max(state.guidedStep,4);showToast("Follow-up marked done ✓");render();return}
     if(a==="handoff-back"){const h=$("#handoff");if(h)h.innerHTML="";return}
-    if(a==="skip"||a==="tomorrow"){const id=state.followups[state.currentFollowup];if(a==="tomorrow"&&id){let c=contact(id);state.reminders.unshift({contact:id,when:"Tomorrow",reason:"You asked for a reminder",draft:""});showToast("We’ll remind you tomorrow about "+c.name+".")}state.currentFollowup++;render();return}
+    if(a==="skip"||a==="tomorrow"){const id=state.draftContactId||state.followups[state.currentFollowup];if(a==="tomorrow"&&id){let c=contact(id);state.reminders.unshift({contact:id,when:"Tomorrow",reason:"You asked for a reminder",draft:""});showToast("We’ll remind you tomorrow about "+c.name+".")}state.currentFollowup++;render();return}
     if(a==="digest"){state.digestSeen=true;state.guidedStep=Math.max(state.guidedStep,4);setHint(4);routeTo("digest");return}
     if(a==="restart"){restart();return}
     if(a==="home"){routeTo("home");return}
@@ -142,7 +142,7 @@
     if(a.startsWith("review:")){state.currentFollowup=Math.max(0,state.followups.indexOf(a.slice(7)));state.guidedStep=Math.max(state.guidedStep,3);setHint(state.guidedStep);routeTo("followup");return}
     if(a.startsWith("star:")){let c=contact(a.slice(5));c.starred=!c.starred;render();return}
     if(a.startsWith("remind:")){let id=a.slice(7);state.reminders.unshift({contact:id,when:"Tomorrow",reason:"You chose to reconnect tomorrow",draft:""});showToast("Reminder set for tomorrow.");return}
-    if(a.startsWith("draft:")){const id=a.slice(6);state.currentFollowup=Math.max(0,state.followups.indexOf(id));if(state.currentFollowup<0)state.currentFollowup=0;routeTo("followup");return}
+    if(a.startsWith("draft:")){const id=a.slice(6);state.draftContactId=id;const index=state.followups.indexOf(id);if(index>=0)state.currentFollowup=index;routeTo("followup");return}
     if(a.startsWith("note:")){const id=a.slice(5),note=prompt("Add a note to remember:");if(note){contact(id).notes.push(note);render();showToast("Note added.");}return}
     if(a.startsWith("confirm:")){showToast("Contact confirmed.");return}
     if(a.startsWith("edit:")){showToast("Contact editing is coming in the full app.");return}
