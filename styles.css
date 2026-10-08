@@ -7,3 +7,15 @@
 @media(max-width:380px){.app-view{padding-left:13px;padding-right:13px}.phone-screen{border-radius:0}.card{padding:11px}.landing{padding:0}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.rolodex-frame{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:18px;background:linear-gradient(90deg,rgba(79,70,229,.055),transparent 18%,transparent 82%,rgba(79,70,229,.055));perspective:1000px}
+.rolodex-list{height:clamp(245px,40vh,315px);overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scroll-padding-block:120px;padding:120px 11px;scrollbar-width:none;mask-image:linear-gradient(to bottom,transparent 0%,#000 20%,#000 80%,transparent 100%);transform-style:preserve-3d}
+.rolodex-list::-webkit-scrollbar{display:none}
+.rolodex-card{position:relative;display:flex;align-items:center;width:100%;min-height:76px;margin:8px auto;padding:12px 38px 12px 12px;text-align:left;text-decoration:none;transform-origin:center center;transform-style:preserve-3d;scroll-snap-align:center;transition:transform .09s linear,opacity .09s linear,box-shadow .15s,border-color .15s;will-change:transform,opacity}
+.rolodex-card[aria-current=true]{border-color:#cbc8ff;box-shadow:0 8px 20px rgba(79,70,229,.13)}
+.rolodex-card .person-row{width:100%}
+.rolodex-number{position:absolute;top:9px;right:11px;color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.5px}
+.rolodex-instruction{margin:8px 0 12px;text-align:center;color:var(--muted);font-size:10px}
+.rolodex-instruction span{display:inline-block;margin-right:4px;color:var(--indigo);font-size:14px;vertical-align:-1px}
+@media(max-width:900px){.rolodex-list{height:clamp(240px,42vh,340px);scroll-padding-block:125px;padding:125px 11px}}
+@media(prefers-reduced-motion:reduce){.rolodex-card{transition:none;will-change:auto}}
+
