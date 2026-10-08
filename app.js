@@ -132,7 +132,7 @@
     if(a==="send"){const h=$("#handoff");if(h)h.innerHTML='<div class="card"><strong style="font-size:12px">Opening your email app…</strong><p class="person-meta">This is a simulated handoff. Did you send it?</p>'+button("Yes, mark it done","sent","button primary full")+button("Back to draft","handoff-back","text-button full")+'</div>';return}
     if(a==="sent"){const id=state.draftContactId||state.followups[state.currentFollowup];state.followups=state.followups.filter(x=>x!==id);state.draftContactId=null;state.currentFollowup=Math.min(state.currentFollowup,state.followups.length-1);state.guidedStep=Math.max(state.guidedStep,4);showToast("Follow-up marked done ✓");render();return}
     if(a==="handoff-back"){const h=$("#handoff");if(h)h.innerHTML="";return}
-    if(a==="skip"||a==="tomorrow"){const id=state.draftContactId||state.followups[state.currentFollowup];if(a==="tomorrow"&&id){let c=contact(id);state.reminders.unshift({contact:id,when:"Tomorrow",reason:"You asked for a reminder",draft:""});showToast("We’ll remind you tomorrow about "+c.name+".")}state.currentFollowup++;render();return}
+    if(a==="skip"||a==="tomorrow"){const id=state.draftContactId||state.followups[state.currentFollowup];if(a==="tomorrow"&&id){let c=contact(id);state.reminders.unshift({contact:id,when:"Tomorrow",reason:"You asked for a reminder",draft:""});showToast("We’ll remind you tomorrow about "+c.name+".")}if(state.draftContactId){state.draftContactId=null;}else{state.currentFollowup++;}render();return}
     if(a==="digest"){state.digestSeen=true;state.guidedStep=Math.max(state.guidedStep,4);setHint(4);routeTo("digest");return}
     if(a==="restart"){restart();return}
     if(a==="home"){routeTo("home");return}
