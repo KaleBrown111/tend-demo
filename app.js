@@ -43,6 +43,7 @@
     else view.innerHTML=home();
     if(tab==="home"&&state.guidedStep===0)setHint(0);
     bindSearch();
+    bindRolodex();
   }
   function home() {
     const pending=state.followups.map(contact).filter(Boolean);
@@ -60,7 +61,7 @@
     if(state.filter==="Starred")list=list.filter(c=>c.starred);
     if(state.filter==="By event")list=list.filter(c=>c.event==="Fall Career Fair");
     if(state.filter==="Due")list=list.filter(c=>state.followups.includes(c.id));
-    return `${head("Contacts",state.contacts.length+" PEOPLE YOU’VE MET")}<label class="searchbox"><span aria-hidden="true">⌕</span><input id="contact-search" value="${esc(state.query)}" placeholder="Search names or places" aria-label="Search contacts"></label><div class="filters">${["All","Starred","By event","Due"].map(f=>button(f,"filter:"+f,"filter-chip "+(state.filter===f?"active":""))).join("")}</div><div id="contact-list">${list.length?list.map(c=>`<article class="card list-card" data-open-contact="${c.id}">${person(c,c.role+" · "+c.company)}<button class="text-button" data-action="open:"+c.id aria-label="Open ${esc(c.name)}">›</button></article>`).join(""):'<div class="empty-state">No matches. Try another search.</div>'}</div>`;
+    return `${head("Contacts",state.contacts.length+" PEOPLE YOU’VE MET")}<label class="searchbox"><span aria-hidden="true">⌕</span><input id="contact-search" value="${esc(state.query)}" placeholder="Search names or places" aria-label="Search contacts"></label><div class="filters">${["All","Starred","By event","Due"].map(f=>button(f,"filter:"+f,"filter-chip "+(state.filter===f?"active":""))).join("")}</div><div class="rolodex-frame"><div class="rolodex-list" id="rolodex-list" role="region" aria-label="Scroll through contacts" tabindex="0">${list.length?list.map((c,i)=>`<a class="rolodex-card card" href="#/contact/${esc(c.id)}" data-rolodex-item="${i}">${person(c,c.role+" · "+c.company)}<span class="rolodex-number">${String(i+1).padStart(2,"0")}</span></a>`).join(""):'<div class="empty-state">No matches. Try another search.</div>'}</div></div><p class="rolodex-instruction"><span aria-hidden="true">↕</span> Scroll to flip through your people</p>`;
   }
   function contactPage(id) {
     const c=contact(id); if(!c)return '<div class="empty-state">Contact not found.</div>';
@@ -101,6 +102,30 @@
   function bindSearch() {
     const input=$("#contact-search"); if(!input)return;
     input.addEventListener("input",e=>{state.query=e.target.value;const pos=e.target.selectionStart;render();const next=$("#contact-search");if(next){next.focus();next.setSelectionRange(pos,pos);}});
+  }
+  function bindRolodex() {
+    const wheel=$("#rolodex-list");
+    if(!wheel)return;
+    const cards=[...wheel.querySelectorAll("[data-rolodex-item]")];
+    let ticking=false;
+    const update=()=>{
+      const frame=wheel.getBoundingClientRect();
+      const center=frame.top+frame.height/2;
+      cards.forEach(card=>{
+        const rect=card.getBoundingClientRect();
+        const delta=rect.top+rect.height/2-center;
+        const distance=Math.min(1,Math.abs(delta)/(frame.height*.48));
+        const tilt=Math.max(-48,Math.min(48,-delta/(frame.height*.48)*48));
+        const shift=Math.sign(delta)*Math.pow(distance,1.3)*14;
+        card.style.transform="perspective(900px) rotateX("+tilt+"deg) translateX("+shift+"px) scale("+(1-distance*.16)+")";
+        card.style.opacity=String(1-distance*.55);
+        card.style.zIndex=String(10-Math.round(distance*8));
+        card.setAttribute("aria-current",distance<.12?"true":"false");
+      });
+      ticking=false;
+    };
+    wheel.addEventListener("scroll",()=>{if(!ticking){requestAnimationFrame(update);ticking=true;}},{passive:true});
+    update();
   }
   function showToast(message) { toastEl.textContent=message;toastEl.classList.add("show");clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>toastEl.classList.remove("show"),2400); }
   function openSheet(content) { sheetRoot.innerHTML='<div class="sheet-backdrop" data-action="close-sheet"><section class="sheet" role="dialog" aria-modal="true">'+content+'</section></div>'; const sheet=$(".sheet",sheetRoot);sheet?.addEventListener("click",e=>{if(e.target.closest('[data-action="close-sheet"]'))closeSheet();e.stopPropagation();}); }
@@ -176,3 +201,4 @@
   // One simulated notification appears after a short pause. It contains no real push delivery.
   setTimeout(()=>{if(state.notificationEnabled&&!state.digestSeen&&route()==="home"){const root=$("#notification-root");if(root){root.innerHTML='<div class="notification" data-action="review:maria-lopez"><strong>Tend · A little reminder</strong><span>Maria’s application deadline is coming up. Your note is ready.</span></div>';setTimeout(()=>{if(root)root.innerHTML=""},7000);}}},20000);
 })();
+
